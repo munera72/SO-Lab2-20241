@@ -38,50 +38,48 @@ void process_command(char *line) {
     Command commands[32];
     int num_commands = 0;
 
-    // Usar el parser
     if (parse_line(line, commands, &num_commands) == -1) {
-        // Error ya mostrado
         return;
     } 
+
+    pid_t pids[32]; // guardamos los procesos hijos
+    int pid_count = 0;
 
     for (int i = 0; i < num_commands; i++) {
         Command *cmd = &commands[i];
 
-        // Si no hay comando, saltar
-        if (cmd->argv[0] == NULL) continue;
+        if (cmd->argv[0] == NULL)
+            continue;
 
-        // Built-in: exit
+        // --- Built-in: exit ---
         if (strcmp(cmd->argv[0], "exit") == 0) {
             if (cmd->argv[1] != NULL) {
-                print_error(); // exit no acepta argumentos
-                continue;
+                print_error();
+                return;
             }
             exit(0);
         }
 
-        // Built-in: cd
+        // --- Built-in: cd ---
         else if (strcmp(cmd->argv[0], "cd") == 0) {
             if (cmd->argv[1] == NULL || cmd->argv[2] != NULL) {
-                print_error(); // cd requiere exactamente 1 argumento
+                print_error();
             } else if (chdir(cmd->argv[1]) != 0) {
                 print_error();
             }
         }
-        
-        // Built-in: path
+
+        // --- Built-in: path ---
         else if (strcmp(cmd->argv[0], "path") == 0) {
-            // liberar paths anteriores
             for (int j = 0; j < num_paths; j++) free(paths[j]);
             num_paths = 0;
-
             for (int j = 1; cmd->argv[j] != NULL; j++) {
-                if (num_paths < MAX_PATHS) {
+                if (num_paths < MAX_PATHS)
                     paths[num_paths++] = strdup(cmd->argv[j]);
-                }
             }
         }
 
-        // Externos (todavía no ejecutamos, solo mostramos)
+        // --- Comando externo ---
         else {
             char *exec_path = find_executable(cmd->argv[0]);
             if (exec_path == NULL) {
@@ -95,8 +93,7 @@ void process_command(char *line) {
                 continue;
             }
 
-            if (pid == 0) {  // Hijo
-                // Si hay redirección
+            if (pid == 0) { // Proceso hijo
                 if (cmd->redirect_file != NULL) {
                     int fd = open(cmd->redirect_file, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU);
                     if (fd < 0) {
@@ -109,15 +106,19 @@ void process_command(char *line) {
                 }
 
                 execv(exec_path, cmd->argv);
-                // Si llega aquí, execv falló
                 print_error();
                 exit(1);
-            } else {
-                // Padre: esperar al hijo
-                int status;
-                waitpid(pid, &status, 0);
+            } 
+            else { 
+                // Padre: guardar PID para esperar luego
+                pids[pid_count++] = pid;
             }
         }
+    }
+
+    // --- Esperar a todos los procesos hijos ---
+    for (int i = 0; i < pid_count; i++) {
+        waitpid(pids[i], NULL, 0);
     }
 }
 
