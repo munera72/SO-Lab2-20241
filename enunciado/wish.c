@@ -21,7 +21,7 @@ void print_error() {
     write(STDERR_FILENO, error_message, strlen(error_message));
 }
 
-// Busca un ejecutable en los paths actuales
+// Busca un ejecutable del comando en los paths actuales
 char* find_executable(char *command) {
     static char fullpath[1024];
     for (int i = 0; i < num_paths; i++) {
@@ -33,7 +33,7 @@ char* find_executable(char *command) {
     return NULL;
 }
 
-// Procesa una línea: por ahora solo reconoce "exit"
+// Procesa una línea de comando (usa el parser para desglosar el comando y sus argumentos)
 void process_command(char *line) {
     Command commands[32];
     int num_commands = 0;
@@ -51,7 +51,7 @@ void process_command(char *line) {
         if (cmd->argv[0] == NULL)
             continue;
 
-        // --- Built-in: exit ---
+        // Nativo: Comando exit
         if (strcmp(cmd->argv[0], "exit") == 0) {
             if (cmd->argv[1] != NULL) {
                 print_error();
@@ -60,7 +60,7 @@ void process_command(char *line) {
             exit(0);
         }
 
-        // --- Built-in: cd ---
+        // Nativo: Comando cd
         else if (strcmp(cmd->argv[0], "cd") == 0) {
             if (cmd->argv[1] == NULL || cmd->argv[2] != NULL) {
                 print_error();
@@ -69,7 +69,7 @@ void process_command(char *line) {
             }
         }
 
-        // --- Built-in: path ---
+        // Nativo: Comando path
         else if (strcmp(cmd->argv[0], "path") == 0) {
             for (int j = 0; j < num_paths; j++) free(paths[j]);
             num_paths = 0;
@@ -79,7 +79,7 @@ void process_command(char *line) {
             }
         }
 
-        // --- Comando externo ---
+        // Comando externo (no nativo de esta función)
         else {
             char *exec_path = find_executable(cmd->argv[0]);
             if (exec_path == NULL) {
@@ -116,7 +116,7 @@ void process_command(char *line) {
         }
     }
 
-    // --- Esperar a todos los procesos hijos ---
+    // Esperar a todos los procesos hijos
     for (int i = 0; i < pid_count; i++) {
         waitpid(pids[i], NULL, 0);
     }
