@@ -8,8 +8,6 @@
 #include <sys/wait.h> // para wait()
 #include <sys/stat.h>
 
-
-#define MAX_LINE 1024
 #define MAX_PATHS 64
 
 char *paths[MAX_PATHS];
