@@ -1,0 +1,4 @@
+pwd
+echo hola mundo desde batch
+ls > lista.txt
+exit
